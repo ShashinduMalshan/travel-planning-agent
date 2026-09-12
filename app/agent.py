@@ -21,22 +21,36 @@ from google.adk.models import Gemini
 from google.adk.tools import agent_tool
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools import url_context
-from google.genai import Client
+from google.genai import Client, types
+
+# Retry configuration to mitigate 429 RESOURCE_EXHAUSTED and temporary rate limits
+RETRY_CONFIG = types.HttpRetryOptions(
+    attempts=5,
+    initial_delay=2.0,
+    http_status_codes=[429, 500, 503],
+)
 
 
 class GlobalGemini(Gemini):
-    """Pins the Vertex AI client to the `global` location or uses local API key."""
+    """Pins the Vertex AI client to the `global` location or uses local API key with retries."""
 
     @cached_property
     def api_client(self) -> Client:
         if os.environ.get("GEMINI_API_KEY"):
-            return Client(api_key=os.environ.get("GEMINI_API_KEY"))
-        return Client(vertexai=True, location="global")
+            return Client(
+                api_key=os.environ.get("GEMINI_API_KEY"),
+                http_options=types.HttpOptions(retry_options=RETRY_CONFIG),
+            )
+        return Client(
+            vertexai=True,
+            location="global",
+            http_options=types.HttpOptions(retry_options=RETRY_CONFIG),
+        )
 
 
 flight_research_agent_url_context_agent = LlmAgent(
     name="Flight_Research_Agent_url_context_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description="Agent specialized in fetching content from URLs.",
     sub_agents=[],
     instruction="Use the UrlContextTool to retrieve content from provided URLs.",
@@ -45,7 +59,7 @@ flight_research_agent_url_context_agent = LlmAgent(
 
 flight_research_agent_google_search_agent = LlmAgent(
     name="Flight_Research_Agent_google_search_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description="Agent specialized in performing Google searches.",
     sub_agents=[],
     instruction="Use the GoogleSearchTool to find information on the web.",
@@ -54,7 +68,7 @@ flight_research_agent_google_search_agent = LlmAgent(
 
 flight_research_agent = LlmAgent(
     name="flight_research_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description=(
         "Finds and summarizes suitable flight options based on destination, travel dates, budget, and user preferences."
     ),
@@ -85,7 +99,7 @@ flight_research_agent = LlmAgent(
 
 hotel_and_itinerary_agent_google_search_agent = LlmAgent(
     name="Hotel_And_Itinerary_Agent_google_search_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description="Agent specialized in performing Google searches.",
     sub_agents=[],
     instruction="Use the GoogleSearchTool to find information on the web.",
@@ -94,7 +108,7 @@ hotel_and_itinerary_agent_google_search_agent = LlmAgent(
 
 hotel_and_itinerary_agent_url_context_agent = LlmAgent(
     name="Hotel_And_Itinerary_Agent_url_context_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description="Agent specialized in fetching content from URLs.",
     sub_agents=[],
     instruction="Use the UrlContextTool to retrieve content from provided URLs.",
@@ -103,7 +117,7 @@ hotel_and_itinerary_agent_url_context_agent = LlmAgent(
 
 hotel_and_itinerary_agent = LlmAgent(
     name="hotel_and_itinerary_agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description=(
         "Researches hotel areas, accommodation options, and creates a simple day-by-day itinerary for business trips."
     ),
@@ -130,7 +144,7 @@ hotel_and_itinerary_agent = LlmAgent(
 
 root_agent = LlmAgent(
     name="Travel_Planning_Coordinator_Agent",
-    model=GlobalGemini(model="gemini-3.5-flash"),
+    model=GlobalGemini(model="gemini-3.5-flash", retry_options=RETRY_CONFIG),
     description=(
         "coordinator travel  Coordinates travel planning by understanding the user's trip requirements, "
         "asking missing questions, delegating flight and hotel/itinerary research, and producing a final travel plan."
